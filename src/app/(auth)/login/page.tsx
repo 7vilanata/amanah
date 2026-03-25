@@ -26,13 +26,6 @@ export default async function LoginPage() {
       </CardHeader>
       <CardContent className="space-y-6">
         <LoginForm />
-        <div className="rounded-xl bg-[var(--surface)] px-4 py-4 text-sm leading-6 text-[var(--muted)]">
-          Seed default setelah `npm run db:seed`:
-          <br />
-          `owner@amanah.local`, `admin@amanah.local`, `member@amanah.local`
-          <br />
-          Password: `Password123!`
-        </div>
       </CardContent>
     </Card>
   );

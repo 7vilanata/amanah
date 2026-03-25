@@ -111,7 +111,6 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
           nextHref={`/calendar?${nextParams.toString()}`}
           title="Calendar lintas project"
           description={`Menampilkan task yang overlap dengan ${format(currentMonth, "MMMM yyyy")} dari semua project yang dapat Anda akses.`}
-          showProjectName
           editableScope={canManageTaskFields ? "all" : "member"}
         />
       ) : (

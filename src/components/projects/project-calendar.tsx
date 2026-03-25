@@ -50,7 +50,6 @@ type ProjectCalendarProps = {
   nextHref: string;
   title?: string;
   description?: string;
-  showProjectName?: boolean;
   editableScope?: "all" | "member" | null;
 };
 
@@ -61,7 +60,6 @@ export function ProjectCalendar({
   nextHref,
   title = "Calendar view",
   description,
-  showProjectName = false,
   editableScope = null,
 }: ProjectCalendarProps) {
   const [activeTask, setActiveTask] = useState<CalendarTask | null>(null);
@@ -173,15 +171,6 @@ export function ProjectCalendar({
                         <p className="overflow-hidden text-sm font-medium text-[var(--foreground)] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
                           {task.title}
                         </p>
-                        {showProjectName && task.projectName ? (
-                          <Link
-                            href={`/projects/${task.projectId}?tab=calendar`}
-                            onClick={(event) => event.stopPropagation()}
-                            className="mt-1 inline-flex text-xs font-medium text-[var(--accent-strong)]"
-                          >
-                            {task.projectName}
-                          </Link>
-                        ) : null}
                         <div className="mt-1 flex flex-wrap items-center gap-2">
                           <Badge tone={taskStatusTone[task.status]}>{taskStatusLabels[task.status]}</Badge>
                         </div>
