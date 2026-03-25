@@ -1,8 +1,9 @@
 "use server";
 
-import { addDays, endOfMonth, startOfDay } from "date-fns";
+import { addDays, endOfMonth } from "date-fns";
 import { revalidatePath } from "next/cache";
 
+import { getBusinessToday } from "@/lib/business-time";
 import { db } from "@/lib/db";
 import { ensureRecurringTasksGenerated } from "@/lib/recurring-tasks";
 import { isAdminRole } from "@/lib/permissions";
@@ -78,6 +79,7 @@ function revalidateProjectViews(projectId: string) {
 
 export async function createRecurringTaskAction(formData: FormData) {
   const user = await requireSessionUser();
+  const today = getBusinessToday();
 
   if (!isAdminRole(user.role)) {
     return errorResult("Role member tidak bisa membuat task harian.");
@@ -122,8 +124,8 @@ export async function createRecurringTaskAction(formData: FormData) {
 
   await ensureRecurringTasksGenerated({
     projectIds: [parsed.data.projectId],
-    fromDate: startOfDay(new Date()),
-    toDate: addDays(new Date(), 7),
+    fromDate: today,
+    toDate: addDays(today, 7),
   });
 
   revalidateProjectViews(parsed.data.projectId);
@@ -134,6 +136,7 @@ export async function createRecurringTaskAction(formData: FormData) {
 export async function updateRecurringTaskAction(formData: FormData) {
   const user = await requireSessionUser();
   const recurringTaskId = String(formData.get("recurringTaskId") ?? "");
+  const today = getBusinessToday();
 
   if (!isAdminRole(user.role)) {
     return errorResult("Role member tidak bisa mengubah template task harian.");
@@ -184,8 +187,8 @@ export async function updateRecurringTaskAction(formData: FormData) {
 
   await ensureRecurringTasksGenerated({
     projectIds: [parsed.data.projectId],
-    fromDate: startOfDay(new Date()),
-    toDate: endOfMonth(new Date()),
+    fromDate: today,
+    toDate: endOfMonth(today),
   });
 
   revalidateProjectViews(parsed.data.projectId);
@@ -195,6 +198,7 @@ export async function updateRecurringTaskAction(formData: FormData) {
 
 export async function toggleRecurringTaskAction(recurringTaskId: string, isActive: boolean) {
   const user = await requireSessionUser();
+  const today = getBusinessToday();
 
   if (!isAdminRole(user.role)) {
     return errorResult("Role member tidak bisa mengubah template task harian.");
@@ -238,8 +242,8 @@ export async function toggleRecurringTaskAction(recurringTaskId: string, isActiv
   if (isActive) {
     await ensureRecurringTasksGenerated({
       projectIds: [recurringTask.projectId],
-      fromDate: startOfDay(new Date()),
-      toDate: addDays(new Date(), 7),
+      fromDate: today,
+      toDate: addDays(today, 7),
     });
   }
 

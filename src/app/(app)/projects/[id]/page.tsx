@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { addDays, addMonths, endOfMonth, format, startOfDay, subMonths } from "date-fns";
+import { addDays, addMonths, endOfMonth, format, subMonths } from "date-fns";
 import { CalendarClock, ListChecks } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -12,6 +12,7 @@ import { ProjectForm } from "@/components/projects/project-form";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { getBusinessToday, toBusinessDay } from "@/lib/business-time";
 import { db } from "@/lib/db";
 import { projectStatusLabels, projectStatusTone } from "@/lib/domain";
 import { normalizeTaskFilters } from "@/lib/filters";
@@ -47,11 +48,12 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
   const currentMonth = filters.month ? new Date(`${filters.month}-01T00:00:00`) : new Date();
   const user = await requireProjectAccess(id);
   const canManageProject = isAdminRole(user.role);
+  const today = getBusinessToday();
 
   await ensureRecurringTasksGenerated({
     projectIds: [id],
-    fromDate: startOfDay(new Date()),
-    toDate: activeTab === "calendar" ? endOfMonth(currentMonth) : addDays(startOfDay(new Date()), 7),
+    fromDate: today,
+    toDate: activeTab === "calendar" ? endOfMonth(currentMonth) : addDays(today, 7),
   });
 
   const project = await db.project.findFirst({
@@ -118,7 +120,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
   }
 
   const projectMembers = project.members.map((member) => member.user);
-  const operationalTasks = filterOperationalTasks(project.tasks, new Date(), 7);
+  const operationalTasks = filterOperationalTasks(project.tasks, today, 7);
   const manualTasks = project.tasks.filter((task) => task.sourceType !== "RECURRING");
   const baseParams = new URLSearchParams();
 
@@ -150,7 +152,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
 
   const taskCount = operationalTasks.length;
   const doneCount = operationalTasks.filter((task) => task.status === "DONE").length;
-  const overdueCount = operationalTasks.filter((task) => task.status !== "DONE" && task.dueDate < new Date()).length;
+  const overdueCount = operationalTasks.filter((task) => task.status !== "DONE" && toBusinessDay(task.dueDate) < today).length;
 
   function buildTabHref(tab: (typeof tabItems)[number]["value"]) {
     const params = new URLSearchParams(baseParams);

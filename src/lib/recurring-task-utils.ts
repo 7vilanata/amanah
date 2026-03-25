@@ -1,6 +1,7 @@
-import { addDays, endOfDay, startOfDay } from "date-fns";
+import { addDays } from "date-fns";
 import type { Task } from "@prisma/client";
 
+import { getBusinessToday, toBusinessDay } from "@/lib/business-time";
 import { recurringTaskFrequencyLabels, type RecurringTaskFrequency } from "@/lib/domain";
 
 const DEFAULT_OPERATIONAL_WINDOW_DAYS = 7;
@@ -8,15 +9,15 @@ const DEFAULT_OPERATIONAL_WINDOW_DAYS = 7;
 export function filterOperationalTasks<
   T extends Pick<Task, "sourceType" | "occurrenceDate" | "status">,
 >(tasks: T[], baseDate = new Date(), horizonDays = DEFAULT_OPERATIONAL_WINDOW_DAYS) {
-  const today = startOfDay(baseDate);
-  const horizon = endOfDay(addDays(today, horizonDays));
+  const today = getBusinessToday(baseDate);
+  const horizon = addDays(today, horizonDays);
 
   return tasks.filter((task) => {
     if (task.sourceType !== "RECURRING" || !task.occurrenceDate) {
       return true;
     }
 
-    const occurrence = startOfDay(task.occurrenceDate);
+    const occurrence = toBusinessDay(task.occurrenceDate);
 
     if (occurrence >= today && occurrence <= horizon) {
       return true;

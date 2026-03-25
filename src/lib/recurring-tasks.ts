@@ -1,8 +1,9 @@
 import "server-only";
 
-import { addDays, endOfDay, isAfter, isBefore, isWeekend, startOfDay } from "date-fns";
+import { addDays, isAfter, isBefore, isWeekend } from "date-fns";
 import type { Prisma } from "@prisma/client";
 
+import { getBusinessToday, toBusinessDay } from "@/lib/business-time";
 import { db } from "@/lib/db";
 import type { RecurringTaskFrequency } from "@/lib/domain";
 
@@ -21,11 +22,11 @@ type TemplateForGeneration = {
 };
 
 function toDayKey(date: Date) {
-  return startOfDay(date).toISOString();
+  return toBusinessDay(date).toISOString();
 }
 
 function getFirstEligibleDate(template: TemplateForGeneration) {
-  let cursor = startOfDay(template.startDate);
+  let cursor = toBusinessDay(template.startDate);
 
   if (template.frequency === "WEEKDAYS") {
     while (isWeekend(cursor)) {
@@ -38,7 +39,10 @@ function getFirstEligibleDate(template: TemplateForGeneration) {
 
 function listOccurrences(template: TemplateForGeneration, fromDate: Date, toDate: Date) {
   const occurrences: Date[] = [];
-  const rangeEnd = endOfDay(toDate);
+  const rangeEnd = toBusinessDay(toDate);
+  const normalizedFrom = toBusinessDay(fromDate);
+  const normalizedStart = toBusinessDay(template.startDate);
+  const normalizedEnd = template.endDate ? toBusinessDay(template.endDate) : null;
   let cursor = getFirstEligibleDate(template);
   let weekdayHit = 0;
 
@@ -49,19 +53,19 @@ function listOccurrences(template: TemplateForGeneration, fromDate: Date, toDate
       (!isWeekend(cursor) && weekdayHit % Math.max(template.interval, 1) === 0);
 
     if (!isWeekdayPattern) {
-      const diffDays = Math.floor((startOfDay(cursor).getTime() - startOfDay(template.startDate).getTime()) / 86400000);
+      const diffDays = Math.floor((cursor.getTime() - normalizedStart.getTime()) / 86400000);
 
       if (diffDays >= 0 && diffDays % Math.max(template.interval, 1) === 0) {
-        if (!isBefore(cursor, startOfDay(fromDate))) {
-          if (!template.endDate || !isAfter(cursor, endOfDay(template.endDate))) {
-            occurrences.push(startOfDay(cursor));
+        if (!isBefore(cursor, normalizedFrom)) {
+          if (!normalizedEnd || !isAfter(cursor, normalizedEnd)) {
+            occurrences.push(cursor);
           }
         }
       }
     } else if (eligible) {
-      if (!isBefore(cursor, startOfDay(fromDate))) {
-        if (!template.endDate || !isAfter(cursor, endOfDay(template.endDate))) {
-          occurrences.push(startOfDay(cursor));
+      if (!isBefore(cursor, normalizedFrom)) {
+        if (!normalizedEnd || !isAfter(cursor, normalizedEnd)) {
+          occurrences.push(cursor);
         }
       }
     }
@@ -79,16 +83,16 @@ function listOccurrences(template: TemplateForGeneration, fromDate: Date, toDate
 export async function ensureRecurringTasksGenerated({
   projectWhere,
   projectIds,
-  fromDate = new Date(),
-  toDate = addDays(new Date(), 7),
+  fromDate = getBusinessToday(),
+  toDate = addDays(getBusinessToday(), 7),
 }: {
   projectWhere?: Prisma.ProjectWhereInput;
   projectIds?: string[];
   fromDate?: Date;
   toDate?: Date;
 }) {
-  const normalizedFrom = startOfDay(fromDate);
-  const normalizedTo = endOfDay(toDate);
+  const normalizedFrom = toBusinessDay(fromDate);
+  const normalizedTo = toBusinessDay(toDate);
 
   if (isBefore(normalizedTo, normalizedFrom)) {
     return;

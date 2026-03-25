@@ -1,15 +1,17 @@
 import Link from "next/link";
-import { addDays, endOfDay, endOfWeek, startOfDay } from "date-fns";
+import { addDays } from "date-fns";
 import { ListChecks } from "lucide-react";
 
 import { GlobalTaskTable } from "@/components/tasks/global-task-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { getBusinessToday } from "@/lib/business-time";
 import { db } from "@/lib/db";
 import { isAdminRole, projectScopeForUser } from "@/lib/permissions";
 import { filterOperationalTasks } from "@/lib/recurring-task-utils";
 import { ensureRecurringTasksGenerated } from "@/lib/recurring-tasks";
 import { requireSessionUser } from "@/lib/session";
+import { matchesTaskRange, normalizeTaskRange, taskRangeItems, type TaskRange } from "@/lib/task-range";
 import { cn, queryValue } from "@/lib/utils";
 
 export const metadata = {
@@ -22,53 +24,11 @@ type TasksPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-type TaskRange = "today" | "tomorrow" | "week" | "overdue";
-
-const taskRangeItems: Array<{ value: TaskRange; label: string }> = [
-  { value: "today", label: "Today" },
-  { value: "tomorrow", label: "Tomorrow" },
-  { value: "week", label: "This week" },
-  { value: "overdue", label: "Overdue" },
-];
-
-function normalizeTaskRange(value: string): TaskRange {
-  if (value === "tomorrow" || value === "week" || value === "overdue") {
-    return value;
-  }
-
-  return "today";
-}
-
-function overlapsTimeline(task: { startDate: Date; dueDate: Date }, rangeStart: Date, rangeEnd: Date) {
-  return task.startDate <= rangeEnd && task.dueDate >= rangeStart;
-}
-
-function matchesTaskRange(
-  task: { startDate: Date; dueDate: Date; status: "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE" },
-  range: TaskRange,
-  today: Date,
-) {
-  if (range === "overdue") {
-    return task.status !== "DONE" && task.dueDate < today;
-  }
-
-  if (range === "tomorrow") {
-    const tomorrow = addDays(today, 1);
-    return overlapsTimeline(task, tomorrow, endOfDay(tomorrow));
-  }
-
-  if (range === "week") {
-    return overlapsTimeline(task, today, endOfWeek(today, { weekStartsOn: 1 }));
-  }
-
-  return overlapsTimeline(task, today, endOfDay(today));
-}
-
 export default async function TasksPage({ searchParams }: TasksPageProps) {
   const user = await requireSessionUser();
   const canManageTaskFields = isAdminRole(user.role);
   const selectedRange = normalizeTaskRange(queryValue((await searchParams).range));
-  const today = startOfDay(new Date());
+  const today = getBusinessToday();
   const nextWeek = addDays(today, 7);
 
   const visibleProjectWhere = {

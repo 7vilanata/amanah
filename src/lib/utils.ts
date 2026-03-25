@@ -1,17 +1,26 @@
-import { format } from "date-fns";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+
+import { BUSINESS_TIME_ZONE, formatBusinessDateKey, getBusinessToday, toBusinessDay } from "@/lib/business-time";
+
+const dateLabelFormatter = new Intl.DateTimeFormat("id-ID", {
+  timeZone: BUSINESS_TIME_ZONE,
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export function formatDate(date: Date | string) {
-  return format(new Date(date), "dd MMM yyyy");
+  const value = date instanceof Date ? date : new Date(date);
+  return dateLabelFormatter.format(value);
 }
 
 export function formatDateInput(date: Date | string) {
-  return format(new Date(date), "yyyy-MM-dd");
+  return formatBusinessDateKey(date);
 }
 
 export function formatDateRange(startDate: Date | string, dueDate: Date | string) {
@@ -28,10 +37,8 @@ export function initials(name: string) {
 }
 
 export function daysBetweenToday(date: Date | string) {
-  const target = new Date(date);
-  const today = new Date();
-  target.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
+  const target = toBusinessDay(date);
+  const today = getBusinessToday();
   const diffMs = target.getTime() - today.getTime();
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }

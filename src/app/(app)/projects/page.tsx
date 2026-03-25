@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { addDays, startOfDay } from "date-fns";
+import { addDays } from "date-fns";
 import { FolderArchive, FolderKanban, Plus } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProjectCard } from "@/components/projects/project-card";
 import { ProjectForm } from "@/components/projects/project-form";
 import { Badge } from "@/components/ui/badge";
+import { getBusinessToday } from "@/lib/business-time";
 import { db } from "@/lib/db";
 import { projectStatusLabels, projectStatusTone } from "@/lib/domain";
 import { isAdminRole, projectScopeForUser } from "@/lib/permissions";
@@ -23,14 +24,15 @@ export const dynamic = "force-dynamic";
 export default async function ProjectsPage() {
   const user = await requireSessionUser();
   const visibleProjectWhere = projectScopeForUser(user);
+  const today = getBusinessToday();
 
   await ensureRecurringTasksGenerated({
     projectWhere: {
       ...visibleProjectWhere,
       isArchived: false,
     },
-    fromDate: startOfDay(new Date()),
-    toDate: addDays(new Date(), 7),
+    fromDate: today,
+    toDate: addDays(today, 7),
   });
 
   const projects = await db.project.findMany({
@@ -138,7 +140,7 @@ export default async function ProjectsPage() {
                         {formatDateRange(project.startDate, project.dueDate)}
                       </td>
                       <td className="px-5 py-4 text-sm font-semibold text-[var(--foreground)]">
-                        {filterOperationalTasks(project.tasks, new Date(), 7).length}
+                        {filterOperationalTasks(project.tasks, today, 7).length}
                       </td>
                       <td className="px-5 py-4">
                         <div className="space-y-1">
@@ -198,7 +200,7 @@ export default async function ProjectsPage() {
                   dueDate: project.dueDate,
                   isArchived: project.isArchived,
                   memberNames: project.members.map((member) => member.user.name).slice(0, 4),
-                  taskCount: filterOperationalTasks(project.tasks, new Date(), 7).length,
+                  taskCount: filterOperationalTasks(project.tasks, today, 7).length,
                   memberCount: project._count.members,
                 }}
                 canManage={canManage}

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { addDays, startOfDay } from "date-fns";
+import { addDays } from "date-fns";
 import { ArrowUpRight, BriefcaseBusiness, Clock3, ListTodo, TimerReset } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getBusinessToday, toBusinessDay } from "@/lib/business-time";
 import { db } from "@/lib/db";
 import { projectStatusLabels, taskStatusLabels, taskStatusTone } from "@/lib/domain";
 import { isAdminRole, projectScopeForUser } from "@/lib/permissions";
@@ -20,7 +21,7 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const user = await requireSessionUser();
-  const today = startOfDay(new Date());
+  const today = getBusinessToday();
   const nextWeek = addDays(today, 7);
 
   const visibleProjectWhere = {
@@ -72,9 +73,9 @@ export default async function DashboardPage() {
   ]);
 
   const operationalTasks = filterOperationalTasks(allVisibleTasks, today, 7);
-  const overdueTasks = operationalTasks.filter((task) => task.status !== "DONE" && task.dueDate < today).length;
+  const overdueTasks = operationalTasks.filter((task) => task.status !== "DONE" && toBusinessDay(task.dueDate) < today).length;
   const dueSoonTasks = operationalTasks.filter(
-    (task) => task.status !== "DONE" && task.dueDate >= today && task.dueDate <= nextWeek,
+    (task) => task.status !== "DONE" && toBusinessDay(task.dueDate) >= today && toBusinessDay(task.dueDate) <= nextWeek,
   ).length;
   const statusDistribution = Object.entries(
     operationalTasks.reduce<Record<string, number>>((accumulator, task) => {

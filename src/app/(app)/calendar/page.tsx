@@ -1,6 +1,7 @@
-import { addMonths, endOfMonth, format, startOfDay, startOfMonth, subMonths } from "date-fns";
+import { addMonths, endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 import { ProjectCalendar } from "@/components/projects/project-calendar";
 import { EmptyState } from "@/components/ui/empty-state";
+import { getBusinessToday } from "@/lib/business-time";
 import { db } from "@/lib/db";
 import { isAdminRole, projectScopeForUser } from "@/lib/permissions";
 import { ensureRecurringTasksGenerated } from "@/lib/recurring-tasks";
@@ -19,6 +20,7 @@ type CalendarPageProps = {
 export default async function CalendarPage({ searchParams }: CalendarPageProps) {
   const user = await requireSessionUser();
   const canManageTaskFields = isAdminRole(user.role);
+  const today = getBusinessToday();
   const resolvedSearchParams = await searchParams;
   const monthParam = Array.isArray(resolvedSearchParams.month)
     ? resolvedSearchParams.month[0]
@@ -32,7 +34,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
 
   await ensureRecurringTasksGenerated({
     projectWhere: visibleProjectWhere,
-    fromDate: startOfDay(new Date()),
+    fromDate: today,
     toDate: endOfMonth(currentMonth),
   });
 
