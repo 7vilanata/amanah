@@ -164,6 +164,8 @@ export function GlobalTaskTable({ tasks, canManageTaskFields }: GlobalTaskTableP
                       }}
                       editableScope={canManageTaskFields ? "all" : "member"}
                       submitLabel="Simpan perubahan"
+                      showDeleteAction={canManageTaskFields}
+                      onDeleteSuccess={() => setActiveTask(null)}
                       onSuccess={() => setActiveTask(null)}
                     />
                   </div>

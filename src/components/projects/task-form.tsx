@@ -2,9 +2,10 @@
 
 import { startTransition, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import type { TaskPriority, TaskStatus } from "@/lib/domain";
 
-import { createTaskAction, updateTaskAction } from "@/actions/task-actions";
+import { createTaskAction, deleteTaskAction, updateTaskAction } from "@/actions/task-actions";
 import { FormMessage } from "@/components/forms/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,9 @@ type TaskFormProps = {
   submitLabel?: string;
   onSuccess?: () => void;
   editableScope?: "all" | "member";
+  showDeleteAction?: boolean;
+  deleteLabel?: string;
+  onDeleteSuccess?: () => void;
 };
 
 const defaultValues: TaskFormValues = {
@@ -53,15 +57,20 @@ export function TaskForm({
   submitLabel,
   onSuccess,
   editableScope = "all",
+  showDeleteAction = false,
+  deleteLabel = "Hapus task",
+  onDeleteSuccess,
 }: TaskFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const values = useMemo(() => ({ ...defaultValues, ...initialValues }), [initialValues]);
   const [pending, setPending] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
   const memberEditMode = mode === "edit" && editableScope === "member";
+  const canDelete = showDeleteAction && mode === "edit" && Boolean(taskId) && editableScope === "all";
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,6 +102,33 @@ export function TaskForm({
         }
 
         onSuccess?.();
+      }
+    });
+  }
+
+  function handleDelete() {
+    if (!taskId) {
+      return;
+    }
+
+    if (!window.confirm("Hapus task ini? Tindakan ini tidak dapat dibatalkan.")) {
+      return;
+    }
+
+    startTransition(async () => {
+      setDeletePending(true);
+      setMessage(null);
+      setFieldErrors({});
+
+      const result = await deleteTaskAction(taskId);
+
+      setDeletePending(false);
+      setMessage(result.message);
+      setSuccess(result.success);
+
+      if (result.success) {
+        router.refresh();
+        onDeleteSuccess?.();
       }
     });
   }
@@ -230,9 +266,17 @@ export function TaskForm({
 
       <FormMessage success={success} message={message} />
 
-      <Button type="submit" disabled={pending}>
-        {pending ? "Menyimpan..." : submitLabel ?? (mode === "create" ? "Tambah task" : "Simpan task")}
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" disabled={pending || deletePending}>
+          {pending ? "Menyimpan..." : submitLabel ?? (mode === "create" ? "Tambah task" : "Simpan task")}
+        </Button>
+        {canDelete ? (
+          <Button type="button" variant="danger" disabled={pending || deletePending} onClick={handleDelete}>
+            <Trash2 className="h-4 w-4" />
+            {deletePending ? "Menghapus..." : deleteLabel}
+          </Button>
+        ) : null}
+      </div>
     </form>
   );
 }

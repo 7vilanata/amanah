@@ -229,6 +229,8 @@ export function ProjectCalendar({
                       }}
                       editableScope={editableScope === "all" ? "all" : "member"}
                       submitLabel="Simpan perubahan"
+                      showDeleteAction={editableScope === "all"}
+                      onDeleteSuccess={() => setActiveTask(null)}
                       onSuccess={() => setActiveTask(null)}
                     />
                   </div>
