@@ -12,7 +12,7 @@ import { ProjectForm } from "@/components/projects/project-form";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { getBusinessToday, toBusinessDay } from "@/lib/business-time";
+import { getBusinessToday, parseBusinessMonth, toBusinessDay } from "@/lib/business-time";
 import { db } from "@/lib/db";
 import { projectStatusLabels, projectStatusTone } from "@/lib/domain";
 import { normalizeTaskFilters } from "@/lib/filters";
@@ -45,10 +45,10 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
   const { id } = await params;
   const filters = normalizeTaskFilters(await searchParams);
   const activeTab = filters.tab;
-  const currentMonth = filters.month ? new Date(`${filters.month}-01T00:00:00`) : new Date();
   const user = await requireProjectAccess(id);
   const canManageProject = isAdminRole(user.role);
   const today = getBusinessToday();
+  const currentMonth = filters.month ? parseBusinessMonth(filters.month) : today;
 
   await ensureRecurringTasksGenerated({
     projectIds: [id],

@@ -45,4 +45,10 @@ export function formatBusinessDateKey(date: Date | string) {
     .padStart(2, "0")}`;
 }
 
+export function parseBusinessMonth(monthValue: string) {
+  const [year, month] = monthValue.split("-").map(Number);
+
+  return new Date(Date.UTC(year, (month || 1) - 1, 1));
+}
+
 export { BUSINESS_TIME_ZONE };

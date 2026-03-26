@@ -4,16 +4,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  addDays,
   endOfMonth,
   endOfWeek,
   eachDayOfInterval,
   format,
   isSameMonth,
-  isToday,
   startOfMonth,
   startOfWeek,
-  subDays,
 } from "date-fns";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
@@ -21,6 +18,7 @@ import { TaskForm } from "@/components/projects/task-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getBusinessToday, toBusinessDay } from "@/lib/business-time";
 import { taskStatusLabels, taskStatusTone } from "@/lib/domain";
 import type { TaskPriority, TaskStatus } from "@/lib/domain";
 import { cn } from "@/lib/utils";
@@ -69,6 +67,7 @@ export function ProjectCalendar({
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
+  const businessToday = getBusinessToday();
   const isInteractive = Boolean(editableScope);
   const calendarDescription =
     description ?? `Menampilkan task yang overlap dengan tanggal di bulan ${format(currentMonth, "MMMM yyyy")}.`;
@@ -127,27 +126,29 @@ export function ProjectCalendar({
           </div>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-7">
             {days.map((day) => {
+              const businessDay = toBusinessDay(day);
               const dayTasks = tasks.filter(
-                (task) => day >= subDays(task.startDate, 0) && day <= addDays(task.dueDate, 0),
+                (task) => businessDay >= toBusinessDay(task.startDate) && businessDay <= toBusinessDay(task.dueDate),
               );
+              const isCurrentBusinessDay = businessDay.getTime() === businessToday.getTime();
 
               return (
                 <div
-                  key={day.toISOString()}
+                  key={businessDay.toISOString()}
                   className={cn(
                     "min-h-44 rounded-[18px] border border-[var(--border)] p-3",
                     isSameMonth(day, currentMonth) ? "bg-white" : "bg-[var(--surface)] opacity-70",
-                    isToday(day) ? "border-[var(--accent)]" : "",
+                    isCurrentBusinessDay ? "border-[var(--accent)]" : "",
                   )}
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <span className="text-sm font-semibold text-[var(--foreground)]">{format(day, "d")}</span>
-                    {isToday(day) ? <Badge tone="accent">Hari ini</Badge> : null}
+                    {isCurrentBusinessDay ? <Badge tone="accent">Hari ini</Badge> : null}
                   </div>
                   <div className="space-y-2">
                     {dayTasks.slice(0, 4).map((task) => (
                       <div
-                        key={`${day.toISOString()}-${task.id}`}
+                        key={`${businessDay.toISOString()}-${task.id}`}
                         role={isInteractive ? "button" : undefined}
                         tabIndex={isInteractive ? 0 : undefined}
                         onClick={isInteractive ? () => setActiveTask(task) : undefined}
