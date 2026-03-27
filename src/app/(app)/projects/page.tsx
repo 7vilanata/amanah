@@ -67,6 +67,9 @@ export default async function ProjectsPage() {
   const activeProjects = projects.filter((project) => !project.isArchived);
   const archivedProjects = projects.filter((project) => project.isArchived);
   const canManage = isAdminRole(user.role);
+  const clientOptions = Array.from(new Set(projects.map((project) => project.clientName.trim()).filter(Boolean))).sort(
+    (left, right) => left.localeCompare(right, "id"),
+  );
 
   return (
     <div className="space-y-8">
@@ -96,7 +99,7 @@ export default async function ProjectsPage() {
             </span>
           </summary>
           <div className="border-t border-[var(--border)] p-5">
-            <ProjectForm mode="create" />
+            <ProjectForm mode="create" clientOptions={clientOptions} />
           </div>
         </details>
       ) : null}
@@ -204,6 +207,7 @@ export default async function ProjectsPage() {
                   memberCount: project._count.members,
                 }}
                 canManage={canManage}
+                clientOptions={clientOptions}
               />
             ))}
           </div>

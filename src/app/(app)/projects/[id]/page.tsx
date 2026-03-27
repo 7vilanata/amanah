@@ -149,6 +149,19 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
         },
       })
     : [];
+  const clientOptions = canManageProject
+    ? (
+        await db.project.findMany({
+          select: {
+            clientName: true,
+          },
+          distinct: ["clientName"],
+          orderBy: {
+            clientName: "asc",
+          },
+        })
+      ).map((project) => project.clientName)
+    : [];
 
   const taskCount = operationalTasks.length;
   const doneCount = operationalTasks.filter((task) => task.status === "DONE").length;
@@ -266,6 +279,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
                 <ProjectForm
                   mode="edit"
                   projectId={project.id}
+                  clientOptions={clientOptions}
                   initialValues={{
                     name: project.name,
                     clientName: project.clientName,

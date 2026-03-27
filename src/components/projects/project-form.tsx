@@ -27,6 +27,7 @@ type ProjectFormProps = {
   projectId?: string;
   initialValues?: Partial<ProjectFormValues>;
   submitLabel?: string;
+  clientOptions?: string[];
 };
 
 const defaultValues: ProjectFormValues = {
@@ -38,19 +39,46 @@ const defaultValues: ProjectFormValues = {
   dueDate: new Date(),
 };
 
-export function ProjectForm({ mode, projectId, initialValues, submitLabel }: ProjectFormProps) {
+const CUSTOM_CLIENT_OPTION = "__custom__";
+
+export function ProjectForm({ mode, projectId, initialValues, submitLabel, clientOptions = [] }: ProjectFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const values = useMemo(() => ({ ...defaultValues, ...initialValues }), [initialValues]);
+  const normalizedClientOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          clientOptions
+            .map((client) => client.trim())
+            .filter(Boolean),
+        ),
+      ).sort((left, right) => left.localeCompare(right, "id")),
+    [clientOptions],
+  );
+  const trimmedClientName = values.clientName.trim();
+  const initialClientSelection = trimmedClientName
+    ? normalizedClientOptions.includes(trimmedClientName)
+      ? trimmedClientName
+      : CUSTOM_CLIENT_OPTION
+    : "";
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
+  const [selectedClient, setSelectedClient] = useState(initialClientSelection);
+  const [customClientName, setCustomClientName] = useState(
+    initialClientSelection === CUSTOM_CLIENT_OPTION ? trimmedClientName : "",
+  );
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
+    const resolvedClientName =
+      selectedClient === CUSTOM_CLIENT_OPTION ? customClientName.trim() : selectedClient.trim();
+
+    formData.set("clientName", resolvedClientName);
 
     if (projectId) {
       formData.set("projectId", projectId);
@@ -74,6 +102,8 @@ export function ProjectForm({ mode, projectId, initialValues, submitLabel }: Pro
 
         if (mode === "create") {
           formRef.current?.reset();
+          setSelectedClient("");
+          setCustomClientName("");
         }
       }
     });
@@ -100,13 +130,39 @@ export function ProjectForm({ mode, projectId, initialValues, submitLabel }: Pro
           <label className="text-sm font-medium text-[var(--muted-strong)]" htmlFor={`${mode}-project-client`}>
             Nama client
           </label>
-          <Input
-            id={`${mode}-project-client`}
+          <input
+            type="hidden"
             name="clientName"
-            defaultValue={values.clientName}
-            placeholder="PT Contoh Makmur"
-            required
+            value={selectedClient === CUSTOM_CLIENT_OPTION ? customClientName : selectedClient}
+            readOnly
           />
+          <Select
+            id={`${mode}-project-client`}
+            value={selectedClient}
+            onChange={(event) => {
+              setSelectedClient(event.target.value);
+
+              if (event.target.value !== CUSTOM_CLIENT_OPTION) {
+                setCustomClientName("");
+              }
+            }}
+          >
+            <option value="">Pilih client</option>
+            {normalizedClientOptions.map((client) => (
+              <option key={client} value={client}>
+                {client}
+              </option>
+            ))}
+            <option value={CUSTOM_CLIENT_OPTION}>+ Tambah client baru</option>
+          </Select>
+          {selectedClient === CUSTOM_CLIENT_OPTION ? (
+            <Input
+              value={customClientName}
+              onChange={(event) => setCustomClientName(event.target.value)}
+              placeholder="Tulis nama client baru"
+              required
+            />
+          ) : null}
           {fieldErrors.clientName?.[0] ? <p className="text-xs text-[#a53a2f]">{fieldErrors.clientName[0]}</p> : null}
         </div>
       </div>

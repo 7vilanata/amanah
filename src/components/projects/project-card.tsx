@@ -29,9 +29,10 @@ type ProjectCardProps = {
     memberCount: number;
   };
   canManage: boolean;
+  clientOptions?: string[];
 };
 
-export function ProjectCard({ project, canManage }: ProjectCardProps) {
+export function ProjectCard({ project, canManage, clientOptions = [] }: ProjectCardProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -130,6 +131,7 @@ export function ProjectCard({ project, canManage }: ProjectCardProps) {
               <ProjectForm
                 mode="edit"
                 projectId={project.id}
+                clientOptions={clientOptions}
                 initialValues={{
                   name: project.name,
                   clientName: project.clientName,
