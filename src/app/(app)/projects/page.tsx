@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ProjectCard } from "@/components/projects/project-card";
 import { ProjectForm } from "@/components/projects/project-form";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { getBusinessToday } from "@/lib/business-time";
 import { db } from "@/lib/db";
 import { projectStatusLabels, projectStatusTone } from "@/lib/domain";
@@ -13,7 +14,7 @@ import { isAdminRole, projectScopeForUser } from "@/lib/permissions";
 import { filterOperationalTasks } from "@/lib/recurring-task-utils";
 import { ensureRecurringTasksGenerated } from "@/lib/recurring-tasks";
 import { requireSessionUser } from "@/lib/session";
-import { formatDateRange } from "@/lib/utils";
+import { cn, formatDateRange } from "@/lib/utils";
 
 export const metadata = {
   title: "Projects",
@@ -164,7 +165,10 @@ export default async function ProjectsPage() {
                       <td className="px-5 py-4 text-right">
                         <Link
                           href={`/projects/${project.id}`}
-                          className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border)] px-4 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
+                          className={cn(
+                            buttonVariants({ variant: "secondary", size: "sm" }),
+                            "min-w-[124px] whitespace-nowrap px-4 text-sm",
+                          )}
                         >
                           Buka project
                         </Link>
