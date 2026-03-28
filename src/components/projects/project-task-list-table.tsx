@@ -21,6 +21,7 @@ import {
   type TaskStatus,
 } from "@/lib/domain";
 import { recurringPatternLabel } from "@/lib/recurring-task-utils";
+import { formatLoggedHours } from "@/lib/task-work-logs";
 import { formatDate, formatDateRange } from "@/lib/utils";
 
 type MemberOption = {
@@ -38,6 +39,9 @@ type ManualTask = {
   dueDate: Date;
   assigneeId: string | null;
   assigneeName: string | null;
+  totalLoggedHours: number;
+  todayWorkHours: number | null;
+  todayWorkNote: string | null;
 };
 
 type RecurringTemplate = {
@@ -128,7 +132,14 @@ function ManualTaskRow({ projectId, task, members, canEdit, canManageTaskFields 
         <td className="px-5 py-4 text-sm leading-6 text-[var(--muted-strong)]">
           {formatDateRange(task.startDate, task.dueDate)}
         </td>
-        <td className="px-5 py-4 text-sm text-[var(--muted-strong)]">{task.assigneeName || "Belum ada PIC"}</td>
+        <td className="px-5 py-4 text-sm text-[var(--muted-strong)]">
+          <div className="space-y-1">
+            <div>{task.assigneeName || "Belum ada PIC"}</div>
+            {task.totalLoggedHours > 0 ? (
+              <div className="text-xs font-medium text-[var(--accent-strong)]">{formatLoggedHours(task.totalLoggedHours)} jam</div>
+            ) : null}
+          </div>
+        </td>
         <td className="px-5 py-4 text-right">
           {canEdit ? (
             <Button variant="secondary" size="sm" onClick={() => setExpanded((current) => !current)}>
@@ -172,6 +183,9 @@ function ManualTaskRow({ projectId, task, members, canEdit, canManageTaskFields 
                   startDate: task.startDate,
                   dueDate: task.dueDate,
                   assigneeId: task.assigneeId,
+                  workHours: task.todayWorkHours,
+                  workNote: task.todayWorkNote,
+                  totalLoggedHours: task.totalLoggedHours,
                 }}
                 editableScope={canManageTaskFields ? "all" : "member"}
                 submitLabel="Simpan perubahan"

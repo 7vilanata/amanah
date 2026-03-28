@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { taskPriorities, taskPriorityLabels, taskStatuses, taskStatusLabels } from "@/lib/domain";
+import { formatLoggedHours } from "@/lib/task-work-logs";
 import { formatDateInput } from "@/lib/utils";
 
 type TaskFormValues = {
@@ -22,6 +23,9 @@ type TaskFormValues = {
   startDate: Date | string;
   dueDate: Date | string;
   assigneeId?: string | null;
+  workHours?: number | null;
+  workNote?: string | null;
+  totalLoggedHours?: number;
 };
 
 type TaskFormProps = {
@@ -46,6 +50,9 @@ const defaultValues: TaskFormValues = {
   startDate: new Date(),
   dueDate: new Date(),
   assigneeId: "",
+  workHours: null,
+  workNote: "",
+  totalLoggedHours: 0,
 };
 
 export function TaskForm({
@@ -71,6 +78,7 @@ export function TaskForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[] | undefined>>({});
   const memberEditMode = mode === "edit" && editableScope === "member";
   const canDelete = showDeleteAction && mode === "edit" && Boolean(taskId) && editableScope === "all";
+  const canLogWork = mode === "edit" && Boolean(taskId);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -161,6 +169,52 @@ export function TaskForm({
               placeholder="Tuliskan detail, referensi, atau hasil yang diharapkan."
             />
           </div>
+
+          {canLogWork ? (
+            <div className="rounded-[20px] border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-[var(--foreground)]">Log kerja hari ini</h3>
+                  <p className="mt-1 text-xs leading-6 text-[var(--muted)]">
+                    Isi jam yang Anda kerjakan hari ini. Kosongkan jam jika ingin menghapus log hari ini.
+                  </p>
+                </div>
+                <div className="text-sm font-semibold text-[var(--accent-strong)]">
+                  Total {formatLoggedHours(values.totalLoggedHours ?? 0)} jam
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,180px)_minmax(0,1fr)]">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[var(--muted-strong)]" htmlFor={`${mode}-task-work-hours`}>
+                    Jam
+                  </label>
+                  <Input
+                    id={`${mode}-task-work-hours`}
+                    name="workHours"
+                    type="number"
+                    min="0.25"
+                    step="0.25"
+                    defaultValue={values.workHours ?? ""}
+                    placeholder="Contoh 2.5"
+                  />
+                  {fieldErrors.workHours?.[0] ? <p className="text-xs text-[#a53a2f]">{fieldErrors.workHours[0]}</p> : null}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[var(--muted-strong)]" htmlFor={`${mode}-task-work-note`}>
+                    Catatan
+                  </label>
+                  <Textarea
+                    id={`${mode}-task-work-note`}
+                    name="workNote"
+                    defaultValue={values.workNote ?? ""}
+                    placeholder="Tulis ringkas apa yang dikerjakan hari ini."
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
         </>
       ) : (
         <>
@@ -261,6 +315,52 @@ export function TaskForm({
               placeholder="Tuliskan detail, referensi, atau hasil yang diharapkan."
             />
           </div>
+
+          {canLogWork ? (
+            <div className="rounded-[20px] border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-[var(--foreground)]">Log kerja hari ini</h3>
+                  <p className="mt-1 text-xs leading-6 text-[var(--muted)]">
+                    Isi jam yang Anda kerjakan hari ini. Kosongkan jam jika ingin menghapus log hari ini.
+                  </p>
+                </div>
+                <div className="text-sm font-semibold text-[var(--accent-strong)]">
+                  Total {formatLoggedHours(values.totalLoggedHours ?? 0)} jam
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,180px)_minmax(0,1fr)]">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[var(--muted-strong)]" htmlFor={`${mode}-task-work-hours`}>
+                    Jam
+                  </label>
+                  <Input
+                    id={`${mode}-task-work-hours`}
+                    name="workHours"
+                    type="number"
+                    min="0.25"
+                    step="0.25"
+                    defaultValue={values.workHours ?? ""}
+                    placeholder="Contoh 2.5"
+                  />
+                  {fieldErrors.workHours?.[0] ? <p className="text-xs text-[#a53a2f]">{fieldErrors.workHours[0]}</p> : null}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[var(--muted-strong)]" htmlFor={`${mode}-task-work-note`}>
+                    Catatan
+                  </label>
+                  <Textarea
+                    id={`${mode}-task-work-note`}
+                    name="workNote"
+                    defaultValue={values.workNote ?? ""}
+                    placeholder="Tulis ringkas apa yang dikerjakan hari ini."
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
         </>
       )}
 

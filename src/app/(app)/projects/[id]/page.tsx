@@ -20,6 +20,7 @@ import { isAdminRole } from "@/lib/permissions";
 import { filterOperationalTasks } from "@/lib/recurring-task-utils";
 import { ensureRecurringTasksGenerated } from "@/lib/recurring-tasks";
 import { requireProjectAccess } from "@/lib/session";
+import { summarizeTaskWorkLogs } from "@/lib/task-work-logs";
 import { formatDateRange } from "@/lib/utils";
 
 export const metadata = {
@@ -98,6 +99,14 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
               name: true,
             },
           },
+          workLogs: {
+            select: {
+              userId: true,
+              hours: true,
+              note: true,
+              workDate: true,
+            },
+          },
         },
         orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
       },
@@ -166,6 +175,47 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
   const taskCount = operationalTasks.length;
   const doneCount = operationalTasks.filter((task) => task.status === "DONE").length;
   const overdueCount = operationalTasks.filter((task) => task.status !== "DONE" && toBusinessDay(task.dueDate) < today).length;
+  const mappedManualTasks = manualTasks.map((task) => {
+    const workLogSummary = summarizeTaskWorkLogs(task.workLogs, user.id, today);
+
+    return {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      startDate: task.startDate,
+      dueDate: task.dueDate,
+      assigneeId: task.assigneeId,
+      assigneeName: task.assignee?.name ?? null,
+      totalLoggedHours: workLogSummary.totalHours,
+      todayWorkHours: workLogSummary.todayHours,
+      todayWorkNote: workLogSummary.todayNote,
+    };
+  });
+  const mappedCalendarTasks = project.tasks.map((task) => {
+    const workLogSummary = summarizeTaskWorkLogs(task.workLogs, user.id, today);
+
+    return {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      startDate: task.startDate,
+      dueDate: task.dueDate,
+      status: task.status,
+      priority: task.priority,
+      assigneeId: task.assigneeId,
+      assigneeName: task.assignee?.name ?? null,
+      projectId: project.id,
+      totalLoggedHours: workLogSummary.totalHours,
+      todayWorkHours: workLogSummary.todayHours,
+      todayWorkNote: workLogSummary.todayNote,
+      members: projectMembers.map((member) => ({
+        id: member.id,
+        name: member.name,
+      })),
+    };
+  });
 
   function buildTabHref(tab: (typeof tabItems)[number]["value"]) {
     const params = new URLSearchParams(baseParams);
@@ -322,17 +372,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
             {manualTasks.length || project.recurringTasks.length ? (
               <ProjectTaskListTable
                 projectId={project.id}
-                tasks={manualTasks.map((task) => ({
-                  id: task.id,
-                  title: task.title,
-                  description: task.description,
-                  status: task.status,
-                  priority: task.priority,
-                  startDate: task.startDate,
-                  dueDate: task.dueDate,
-                  assigneeId: task.assigneeId,
-                  assigneeName: task.assignee?.name ?? null,
-                }))}
+                tasks={mappedManualTasks}
                 recurringTasks={project.recurringTasks.map((task) => ({
                   id: task.id,
                   title: task.title,
@@ -391,22 +431,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
       {activeTab === "calendar" ? (
         project.tasks.length ? (
           <ProjectCalendar
-            tasks={project.tasks.map((task) => ({
-              id: task.id,
-              title: task.title,
-              description: task.description,
-              startDate: task.startDate,
-              dueDate: task.dueDate,
-              status: task.status,
-              priority: task.priority,
-              assigneeId: task.assigneeId,
-              assigneeName: task.assignee?.name ?? null,
-              projectId: project.id,
-              members: projectMembers.map((member) => ({
-                id: member.id,
-                name: member.name,
-              })),
-            }))}
+            tasks={mappedCalendarTasks}
             currentMonth={currentMonth}
             previousHref={`/projects/${project.id}?${previousCalendarParams.toString()}`}
             nextHref={`/projects/${project.id}?${nextCalendarParams.toString()}`}

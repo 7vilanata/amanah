@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { isAdminRole, projectScopeForUser } from "@/lib/permissions";
 import { ensureRecurringTasksGenerated } from "@/lib/recurring-tasks";
 import { requireSessionUser } from "@/lib/session";
+import { summarizeTaskWorkLogs } from "@/lib/task-work-logs";
 
 export const metadata = {
   title: "Global Calendar",
@@ -49,6 +50,14 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
           name: true,
         },
       },
+      workLogs: {
+        select: {
+          userId: true,
+          hours: true,
+          note: true,
+          workDate: true,
+        },
+      },
       project: {
         select: {
           id: true,
@@ -72,6 +81,30 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
 
   const previousParams = new URLSearchParams();
   const nextParams = new URLSearchParams();
+  const mappedTasks = tasks.map((task) => {
+    const workLogSummary = summarizeTaskWorkLogs(task.workLogs, user.id, today);
+
+    return {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      startDate: task.startDate,
+      dueDate: task.dueDate,
+      status: task.status,
+      priority: task.priority,
+      assigneeId: task.assigneeId,
+      assigneeName: task.assignee?.name ?? null,
+      projectId: task.project.id,
+      projectName: task.project.name,
+      totalLoggedHours: workLogSummary.totalHours,
+      todayWorkHours: workLogSummary.todayHours,
+      todayWorkNote: workLogSummary.todayNote,
+      members: task.project.members.map((member) => ({
+        id: member.user.id,
+        name: member.user.name,
+      })),
+    };
+  });
 
   previousParams.set("month", format(subMonths(startOfMonth(currentMonth), 1), "yyyy-MM"));
   nextParams.set("month", format(addMonths(startOfMonth(currentMonth), 1), "yyyy-MM"));
@@ -91,23 +124,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
 
       {tasks.length ? (
         <ProjectCalendar
-          tasks={tasks.map((task) => ({
-            id: task.id,
-            title: task.title,
-            description: task.description,
-            startDate: task.startDate,
-            dueDate: task.dueDate,
-            status: task.status,
-            priority: task.priority,
-            assigneeId: task.assigneeId,
-            assigneeName: task.assignee?.name ?? null,
-            projectId: task.project.id,
-            projectName: task.project.name,
-            members: task.project.members.map((member) => ({
-              id: member.user.id,
-              name: member.user.name,
-            })),
-          }))}
+          tasks={mappedTasks}
           currentMonth={currentMonth}
           previousHref={`/calendar?${previousParams.toString()}`}
           nextHref={`/calendar?${nextParams.toString()}`}

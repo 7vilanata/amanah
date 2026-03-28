@@ -12,6 +12,7 @@ import { filterOperationalTasks } from "@/lib/recurring-task-utils";
 import { ensureRecurringTasksGenerated } from "@/lib/recurring-tasks";
 import { requireSessionUser } from "@/lib/session";
 import { matchesTaskRange, normalizeTaskRange, taskRangeItems, type TaskRange } from "@/lib/task-range";
+import { summarizeTaskWorkLogs } from "@/lib/task-work-logs";
 import { cn, queryValue } from "@/lib/utils";
 
 export const metadata = {
@@ -66,6 +67,14 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
           name: true,
         },
       },
+      workLogs: {
+        select: {
+          userId: true,
+          hours: true,
+          note: true,
+          workDate: true,
+        },
+      },
       project: {
         select: {
           id: true,
@@ -88,6 +97,33 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
 
   const operationalTasks = filterOperationalTasks(allVisibleTasks, today, 7);
   const tasks = operationalTasks.filter((task) => matchesTaskRange(task, selectedRange, today));
+  const mappedTasks = tasks.map((task) => {
+    const workLogSummary = summarizeTaskWorkLogs(task.workLogs, user.id, today);
+
+    return {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      sourceType: task.sourceType,
+      startDate: task.startDate,
+      dueDate: task.dueDate,
+      assigneeId: task.assigneeId,
+      assigneeName: task.assignee?.name ?? null,
+      totalLoggedHours: workLogSummary.totalHours,
+      todayWorkHours: workLogSummary.todayHours,
+      todayWorkNote: workLogSummary.todayNote,
+      project: {
+        id: task.project.id,
+        name: task.project.name,
+        members: task.project.members.map((member) => ({
+          id: member.user.id,
+          name: member.user.name,
+        })),
+      },
+    };
+  });
   const rangeCounts = taskRangeItems.reduce<Record<TaskRange, number>>(
     (accumulator, item) => {
       accumulator[item.value] = operationalTasks.filter((task) => matchesTaskRange(task, item.value, today)).length;
@@ -147,26 +183,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
           {tasks.length ? (
             <GlobalTaskTable
               canManageTaskFields={canManageTaskFields}
-              tasks={tasks.map((task) => ({
-                id: task.id,
-                title: task.title,
-                description: task.description,
-                status: task.status,
-                priority: task.priority,
-                sourceType: task.sourceType,
-                startDate: task.startDate,
-                dueDate: task.dueDate,
-                assigneeId: task.assigneeId,
-                assigneeName: task.assignee?.name ?? null,
-                project: {
-                  id: task.project.id,
-                  name: task.project.name,
-                  members: task.project.members.map((member) => ({
-                    id: member.user.id,
-                    name: member.user.name,
-                  })),
-                },
-              }))}
+              tasks={mappedTasks}
             />
           ) : (
             <EmptyState

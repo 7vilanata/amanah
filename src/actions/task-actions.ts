@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getBusinessToday } from "@/lib/business-time";
 import { db } from "@/lib/db";
 import { isAdminRole } from "@/lib/permissions";
 import { requireSessionUser } from "@/lib/session";
@@ -67,6 +68,43 @@ async function getProjectState(projectId: string) {
   });
 }
 
+async function upsertTodayTaskWorkLog(taskId: string, userId: string, hours?: number, note?: string) {
+  const workDate = getBusinessToday();
+
+  if (hours === undefined) {
+    await db.taskWorkLog.deleteMany({
+      where: {
+        taskId,
+        userId,
+        workDate,
+      },
+    });
+
+    return;
+  }
+
+  await db.taskWorkLog.upsert({
+    where: {
+      taskId_userId_workDate: {
+        taskId,
+        userId,
+        workDate,
+      },
+    },
+    update: {
+      hours,
+      note: note ?? null,
+    },
+    create: {
+      taskId,
+      userId,
+      workDate,
+      hours,
+      note: note ?? null,
+    },
+  });
+}
+
 export async function createTaskAction(formData: FormData) {
   const user = await requireSessionUser();
   const parsed = taskSchema.safeParse(formDataToObject(formData));
@@ -99,7 +137,13 @@ export async function createTaskAction(formData: FormData) {
 
   await db.task.create({
     data: {
-      ...parsed.data,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      status: parsed.data.status,
+      priority: parsed.data.priority,
+      startDate: parsed.data.startDate,
+      dueDate: parsed.data.dueDate,
+      projectId: parsed.data.projectId,
       assigneeId: assignee.assigneeId,
       createdById: user.id,
     },
@@ -167,8 +211,12 @@ export async function updateTaskAction(formData: FormData) {
       },
     });
 
+    await upsertTodayTaskWorkLog(taskId, user.id, parsed.data.workHours, parsed.data.workNote);
+
     revalidatePath("/dashboard");
     revalidatePath("/projects");
+    revalidatePath("/tasks");
+    revalidatePath("/calendar");
     revalidatePath(`/projects/${existingTask.projectId}`);
 
     return successResult("Task berhasil diperbarui.");
@@ -201,8 +249,12 @@ export async function updateTaskAction(formData: FormData) {
     },
   });
 
+  await upsertTodayTaskWorkLog(taskId, user.id, parsed.data.workHours, parsed.data.workNote);
+
   revalidatePath("/dashboard");
   revalidatePath("/projects");
+  revalidatePath("/tasks");
+  revalidatePath("/calendar");
   revalidatePath(`/projects/${existingTask.projectId}`);
 
   return successResult("Task berhasil diperbarui.");
@@ -249,6 +301,8 @@ export async function deleteTaskAction(taskId: string) {
 
   revalidatePath("/dashboard");
   revalidatePath("/projects");
+  revalidatePath("/tasks");
+  revalidatePath("/calendar");
   revalidatePath(`/projects/${task.projectId}`);
 
   return successResult("Task berhasil dihapus.");
@@ -299,6 +353,8 @@ export async function moveTaskAction(taskId: string, status: TaskStatus) {
 
   revalidatePath("/dashboard");
   revalidatePath("/projects");
+  revalidatePath("/tasks");
+  revalidatePath("/calendar");
   revalidatePath(`/projects/${task.projectId}`);
 
   return successResult("Status task berhasil diperbarui.");

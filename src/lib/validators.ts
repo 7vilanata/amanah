@@ -11,6 +11,27 @@ const optionalTrimmed = z
   .optional()
   .transform((value) => value || undefined);
 
+const optionalHoursField = z.preprocess(
+  (value) => {
+    if (value === "" || value === null || value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value === "number") {
+      return value;
+    }
+
+    return Number(value);
+  },
+  z
+    .number({
+      error: "Jam harus berupa angka.",
+    })
+    .min(0.25, "Jam minimal 0.25.")
+    .max(24, "Jam maksimal 24.")
+    .optional(),
+);
+
 const dateField = z.coerce.date({
   error: "Tanggal tidak valid.",
 });
@@ -44,16 +65,29 @@ export const taskSchema = z
     dueDate: dateField,
     projectId: trimmedRequired("Project"),
     assigneeId: optionalTrimmed,
+    workHours: optionalHoursField,
+    workNote: optionalTrimmed,
   })
   .refine((value) => value.dueDate >= value.startDate, {
     message: "Due date harus sama atau setelah start date.",
     path: ["dueDate"],
+  })
+  .refine((value) => !value.workNote || value.workHours !== undefined, {
+    message: "Jam wajib diisi saat menambahkan catatan kerja.",
+    path: ["workHours"],
   });
 
-export const memberTaskUpdateSchema = z.object({
-  status: z.enum(taskStatuses),
-  description: optionalTrimmed,
-});
+export const memberTaskUpdateSchema = z
+  .object({
+    status: z.enum(taskStatuses),
+    description: optionalTrimmed,
+    workHours: optionalHoursField,
+    workNote: optionalTrimmed,
+  })
+  .refine((value) => !value.workNote || value.workHours !== undefined, {
+    message: "Jam wajib diisi saat menambahkan catatan kerja.",
+    path: ["workHours"],
+  });
 
 export const recurringTaskSchema = z
   .object({

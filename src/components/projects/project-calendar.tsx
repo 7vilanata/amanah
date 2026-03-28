@@ -39,6 +39,9 @@ type CalendarTask = {
     name: string;
   }>;
   projectName?: string;
+  totalLoggedHours: number;
+  todayWorkHours: number | null;
+  todayWorkNote: string | null;
 };
 
 type ProjectCalendarProps = {
@@ -226,6 +229,9 @@ export function ProjectCalendar({
                         startDate: activeTask.startDate,
                         dueDate: activeTask.dueDate,
                         assigneeId: activeTask.assigneeId,
+                        workHours: activeTask.todayWorkHours,
+                        workNote: activeTask.todayWorkNote,
+                        totalLoggedHours: activeTask.totalLoggedHours,
                       }}
                       editableScope={editableScope === "all" ? "all" : "member"}
                       submitLabel="Simpan perubahan"

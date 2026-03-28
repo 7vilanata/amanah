@@ -30,6 +30,9 @@ type GlobalTaskTableTask = {
       name: string;
     }>;
   };
+  totalLoggedHours: number;
+  todayWorkHours: number | null;
+  todayWorkNote: string | null;
 };
 
 type GlobalTaskTableProps = {
@@ -161,6 +164,9 @@ export function GlobalTaskTable({ tasks, canManageTaskFields }: GlobalTaskTableP
                         startDate: activeTask.startDate,
                         dueDate: activeTask.dueDate,
                         assigneeId: activeTask.assigneeId,
+                        workHours: activeTask.todayWorkHours,
+                        workNote: activeTask.todayWorkNote,
+                        totalLoggedHours: activeTask.totalLoggedHours,
                       }}
                       editableScope={canManageTaskFields ? "all" : "member"}
                       submitLabel="Simpan perubahan"
