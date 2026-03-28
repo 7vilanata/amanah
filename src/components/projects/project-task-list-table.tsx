@@ -162,7 +162,7 @@ function ManualTaskRow({ projectId, task, members, canEdit, canManageTaskFields 
                   <p className="text-sm text-[var(--muted)]">
                     {canManageTaskFields
                       ? "Perbarui status, timeline, PIC, atau deskripsi task."
-                      : "Role member hanya bisa memperbarui status dan deskripsi task."}
+                      : "Role member hanya bisa memperbarui status dan mengisi log kerja."}
                   </p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => setExpanded(false)}>

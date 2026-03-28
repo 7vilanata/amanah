@@ -35,8 +35,10 @@ function createMariaDbAdapter() {
 const cachedPrisma = globalForPrisma.prisma;
 const hasRecurringTaskDelegate =
   cachedPrisma && "recurringTask" in (cachedPrisma as PrismaClient & { recurringTask?: unknown });
+const hasTaskWorkLogDelegate =
+  cachedPrisma && "taskWorkLog" in (cachedPrisma as PrismaClient & { taskWorkLog?: unknown });
 
-export const db = hasRecurringTaskDelegate ? cachedPrisma : createPrismaClient();
+export const db = hasRecurringTaskDelegate && hasTaskWorkLogDelegate ? cachedPrisma : createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = db;

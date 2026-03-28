@@ -158,18 +158,6 @@ export function TaskForm({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[var(--muted-strong)]" htmlFor={`${mode}-task-description`}>
-              Deskripsi
-            </label>
-            <Textarea
-              id={`${mode}-task-description`}
-              name="description"
-              defaultValue={values.description ?? ""}
-              placeholder="Tuliskan detail, referensi, atau hasil yang diharapkan."
-            />
-          </div>
-
           {canLogWork ? (
             <div className="rounded-[20px] border border-[var(--border)] bg-[var(--surface)] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
