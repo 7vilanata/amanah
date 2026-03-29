@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { addDays } from "date-fns";
-import { ArrowUpRight, BriefcaseBusiness, Clock3, ListTodo, TimerReset } from "lucide-react";
+import { ArrowUpRight, BriefcaseBusiness, Clock3, TimerReset } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
         },
       };
 
-  const [activeProjects, allVisibleTasks] = await Promise.all([
+  const [activeProjects, allVisibleTasks, dashboardProjects, clientGroups] = await Promise.all([
     db.project.count({
       where: {
         ...visibleProjectWhere,
@@ -70,6 +70,20 @@ export default async function DashboardPage() {
       },
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
     }),
+    db.project.findMany({
+      where: visibleProjectWhere,
+      orderBy: [{ dueDate: "asc" }],
+      take: 5,
+    }),
+    db.project.groupBy({
+      by: ["clientName"],
+      where: visibleProjectWhere,
+      _count: {
+        _all: true,
+      },
+      orderBy: [{ _count: { id: "desc" } }, { clientName: "asc" }],
+      take: 8,
+    }),
   ]);
 
   const operationalTasks = filterOperationalTasks(allVisibleTasks, today, 7);
@@ -87,6 +101,10 @@ export default async function DashboardPage() {
     _count: count,
   }));
   const myTasks = operationalTasks.filter((task) => task.assigneeId === user.id).slice(0, 8);
+  const clientSummary = clientGroups.map((item) => ({
+    clientName: item.clientName,
+    projectCount: item._count._all,
+  }));
 
   const statCards = [
     {
@@ -218,11 +236,7 @@ export default async function DashboardPage() {
             <CardDescription>Snapshot status project yang sedang Anda pegang.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {(await db.project.findMany({
-              where: visibleProjectWhere,
-              orderBy: [{ dueDate: "asc" }],
-              take: 5,
-            })).map((project) => (
+            {dashboardProjects.map((project) => (
               <Link
                 href={`/projects/${project.id}`}
                 key={project.id}
@@ -243,22 +257,30 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Next steps</CardTitle>
-            <CardDescription>Ritme kerja yang sebaiknya diprioritaskan minggu ini.</CardDescription>
+            <CardTitle>Client overview</CardTitle>
+            <CardDescription>Daftar client dan jumlah project yang sedang bisa Anda akses.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {[
-              "Pastikan semua task urgent sudah memiliki PIC dan due date.",
-              "Review project dengan status On Hold agar timeline tidak mandek.",
-              "Gunakan board di detail project untuk memindahkan task review ke done setelah QA selesai.",
-            ].map((item) => (
-              <div key={item} className="flex gap-3 rounded-2xl bg-[var(--surface)] px-4 py-4">
-                <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-white">
-                  <ListTodo className="h-4 w-4 text-[var(--accent)]" />
+            {clientSummary.length ? (
+              clientSummary.map((client) => (
+                <div
+                  key={client.clientName}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4"
+                >
+                  <div>
+                    <p className="font-medium text-[var(--foreground)]">{client.clientName}</p>
+                    <p className="text-sm text-[var(--muted)]">
+                      {client.projectCount} project{client.projectCount > 1 ? "" : ""}
+                    </p>
+                  </div>
+                  <div className="text-2xl font-semibold text-[var(--foreground)]">{client.projectCount}</div>
                 </div>
-                <p className="text-sm leading-6 text-[var(--muted-strong)]">{item}</p>
+              ))
+            ) : (
+              <div className="rounded-[24px] border border-dashed border-[var(--border)] bg-[var(--surface)] px-4 py-8 text-center text-sm text-[var(--muted)]">
+                Belum ada client yang muncul dari project aktif Anda.
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
       </section>
