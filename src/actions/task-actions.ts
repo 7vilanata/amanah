@@ -151,6 +151,8 @@ export async function createTaskAction(formData: FormData) {
 
   revalidatePath("/dashboard");
   revalidatePath("/projects");
+  revalidatePath("/tasks");
+  revalidatePath("/calendar");
   revalidatePath(`/projects/${parsed.data.projectId}`);
 
   return successResult("Task baru berhasil dibuat.");

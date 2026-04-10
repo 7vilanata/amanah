@@ -2,6 +2,7 @@ import Link from "next/link";
 import { addDays } from "date-fns";
 import { ListChecks } from "lucide-react";
 
+import { GlobalTaskCreationButton } from "@/components/tasks/global-task-creation-button";
 import { GlobalTaskTable } from "@/components/tasks/global-task-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -56,44 +57,68 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
         },
       };
 
-  const allVisibleTasks = await db.task.findMany({
-    where: {
-      project: visibleTaskProjectWhere,
-    },
-    include: {
-      assignee: {
-        select: {
-          id: true,
-          name: true,
-        },
+  const [allVisibleTasks, createTaskProjects] = await Promise.all([
+    db.task.findMany({
+      where: {
+        project: visibleTaskProjectWhere,
       },
-      workLogs: {
-        select: {
-          userId: true,
-          hours: true,
-          note: true,
-          workDate: true,
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+          },
         },
-      },
-      project: {
-        select: {
-          id: true,
-          name: true,
-          members: {
-            select: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
+        workLogs: {
+          select: {
+            userId: true,
+            hours: true,
+            note: true,
+            workDate: true,
+          },
+        },
+        project: {
+          select: {
+            id: true,
+            name: true,
+            members: {
+              select: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
                 },
               },
             },
           },
         },
       },
-    },
-    orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
-  });
+      orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+    }),
+    db.project.findMany({
+      where: visibleTaskProjectWhere,
+      select: {
+        id: true,
+        name: true,
+        clientName: true,
+        members: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
+      orderBy: [{ name: "asc" }],
+    }),
+  ]);
 
   const operationalTasks = filterOperationalTasks(allVisibleTasks, today, 7);
   const tasks = operationalTasks.filter((task) => matchesTaskRange(task, selectedRange, today));
@@ -137,14 +162,26 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     },
   );
   const activeRangeLabel = taskRangeItems.find((item) => item.value === selectedRange)?.label ?? "Today";
+  const projectOptions = createTaskProjects.map((project) => ({
+    id: project.id,
+    name: project.name,
+    clientName: project.clientName,
+    members: project.members.map((member) => ({
+      id: member.user.id,
+      name: member.user.name,
+    })),
+  }));
 
   return (
     <div className="space-y-8">
-      <section className="space-y-3">
-        <div className="inline-flex rounded-full bg-[var(--surface)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted-strong)]">
-          Tasks
+      <section className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-3">
+          <div className="inline-flex rounded-full bg-[var(--surface)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted-strong)]">
+            Tasks
+          </div>
+          <h1 className="text-3xl font-semibold text-[var(--foreground)] md:text-4xl">Gabungan semua task</h1>
         </div>
-        <h1 className="text-3xl font-semibold text-[var(--foreground)] md:text-4xl">Gabungan semua task</h1>
+        <GlobalTaskCreationButton projects={projectOptions} />
       </section>
 
       <Card>

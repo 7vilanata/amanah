@@ -1,5 +1,6 @@
 import { addMonths, endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 import { ProjectCalendar } from "@/components/projects/project-calendar";
+import { GlobalTaskCreationButton } from "@/components/tasks/global-task-creation-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getBusinessToday, parseBusinessMonth } from "@/lib/business-time";
 import { db } from "@/lib/db";
@@ -39,45 +40,69 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
     toDate: endOfMonth(currentMonth),
   });
 
-  const tasks = await db.task.findMany({
-    where: {
-      project: visibleProjectWhere,
-    },
-    include: {
-      assignee: {
-        select: {
-          id: true,
-          name: true,
-        },
+  const [tasks, createTaskProjects] = await Promise.all([
+    db.task.findMany({
+      where: {
+        project: visibleProjectWhere,
       },
-      workLogs: {
-        select: {
-          userId: true,
-          hours: true,
-          note: true,
-          workDate: true,
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+          },
         },
-      },
-      project: {
-        select: {
-          id: true,
-          name: true,
-          clientName: true,
-          members: {
-            select: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
+        workLogs: {
+          select: {
+            userId: true,
+            hours: true,
+            note: true,
+            workDate: true,
+          },
+        },
+        project: {
+          select: {
+            id: true,
+            name: true,
+            clientName: true,
+            members: {
+              select: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
                 },
               },
             },
           },
         },
       },
-    },
-    orderBy: [{ startDate: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
-  });
+      orderBy: [{ startDate: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
+    }),
+    db.project.findMany({
+      where: visibleProjectWhere,
+      select: {
+        id: true,
+        name: true,
+        clientName: true,
+        members: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
+      orderBy: [{ name: "asc" }],
+    }),
+  ]);
 
   const previousParams = new URLSearchParams();
   const nextParams = new URLSearchParams();
@@ -108,6 +133,15 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
 
   previousParams.set("month", format(subMonths(startOfMonth(currentMonth), 1), "yyyy-MM"));
   nextParams.set("month", format(addMonths(startOfMonth(currentMonth), 1), "yyyy-MM"));
+  const projectOptions = createTaskProjects.map((project) => ({
+    id: project.id,
+    name: project.name,
+    clientName: project.clientName,
+    members: project.members.map((member) => ({
+      id: member.user.id,
+      name: member.user.name,
+    })),
+  }));
 
   return (
     <div className="space-y-8">
@@ -120,6 +154,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
             Lihat timeline task dari semua project yang bisa Anda akses
           </h1>
         </div>
+        <GlobalTaskCreationButton projects={projectOptions} />
       </section>
 
       {tasks.length ? (
