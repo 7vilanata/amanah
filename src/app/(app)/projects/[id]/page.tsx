@@ -210,6 +210,10 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
       totalLoggedHours: workLogSummary.totalHours,
       todayWorkHours: workLogSummary.todayHours,
       todayWorkNote: workLogSummary.todayNote,
+      workLogs: task.workLogs.map((workLog) => ({
+        hours: workLog.hours,
+        workDate: workLog.workDate,
+      })),
       members: projectMembers.map((member) => ({
         id: member.id,
         name: member.name,

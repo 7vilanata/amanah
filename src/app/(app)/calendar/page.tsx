@@ -124,6 +124,10 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
       totalLoggedHours: workLogSummary.totalHours,
       todayWorkHours: workLogSummary.todayHours,
       todayWorkNote: workLogSummary.todayNote,
+      workLogs: task.workLogs.map((workLog) => ({
+        hours: workLog.hours,
+        workDate: workLog.workDate,
+      })),
       members: task.project.members.map((member) => ({
         id: member.user.id,
         name: member.user.name,

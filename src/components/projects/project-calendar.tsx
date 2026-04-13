@@ -12,7 +12,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, X } from "lucide-react";
 
 import { TaskForm } from "@/components/projects/task-form";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getBusinessToday, toBusinessDay } from "@/lib/business-time";
 import { taskStatusLabels, taskStatusTone } from "@/lib/domain";
 import type { TaskPriority, TaskStatus } from "@/lib/domain";
+import { formatLoggedHours, sumTaskWorkLogsForLatestDate } from "@/lib/task-work-logs";
 import { cn } from "@/lib/utils";
 
 type CalendarTask = {
@@ -37,6 +38,10 @@ type CalendarTask = {
   members: Array<{
     id: string;
     name: string;
+  }>;
+  workLogs: Array<{
+    hours: number;
+    workDate: Date;
   }>;
   projectName?: string;
   totalLoggedHours: number;
@@ -64,12 +69,24 @@ export function ProjectCalendar({
   editableScope = null,
 }: ProjectCalendarProps) {
   const [activeTask, setActiveTask] = useState<CalendarTask | null>(null);
+  const [showWeekends, setShowWeekends] = useState(false);
   const portalTarget = typeof document === "undefined" ? null : document.body;
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
+  const visibleDays = showWeekends ? days : days.filter((day) => ![0, 6].includes(day.getDay()));
+  const dayLabels = [
+    { label: "Sen", isWeekend: false },
+    { label: "Sel", isWeekend: false },
+    { label: "Rab", isWeekend: false },
+    { label: "Kam", isWeekend: false },
+    { label: "Jum", isWeekend: false },
+    { label: "Sab", isWeekend: true },
+    { label: "Min", isWeekend: true },
+  ];
+  const visibleDayLabels = showWeekends ? dayLabels : dayLabels.filter((day) => !day.isWeekend);
   const businessToday = getBusinessToday();
   const isInteractive = Boolean(editableScope);
   const calendarDescription =
@@ -99,12 +116,21 @@ export function ProjectCalendar({
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
+        <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle>{title}</CardTitle>
             <p className="mt-1 text-sm text-[var(--muted)]">{calendarDescription}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
+            <Button
+              variant="secondary"
+              size="sm"
+              aria-pressed={showWeekends}
+              onClick={() => setShowWeekends((current) => !current)}
+            >
+              {showWeekends ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showWeekends ? "Sembunyikan Sabtu & Minggu" : "Tampilkan Sabtu & Minggu"}
+            </Button>
             <Link
               href={previousHref}
               className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]"
@@ -120,26 +146,35 @@ export function ProjectCalendar({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-            {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((day) => (
-              <div key={day} className="px-2 py-1">
-                {day}
+          <div
+            className={cn(
+              "grid gap-2 text-center text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]",
+              showWeekends ? "grid-cols-7" : "grid-cols-5",
+            )}
+          >
+            {visibleDayLabels.map((day) => (
+              <div key={day.label} className="px-2 py-1">
+                {day.label}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-7">
-            {days.map((day) => {
+          <div className={cn("grid grid-cols-1 gap-2", showWeekends ? "md:grid-cols-7" : "md:grid-cols-5")}>
+            {visibleDays.map((day) => {
               const businessDay = toBusinessDay(day);
               const dayTasks = tasks.filter(
                 (task) => businessDay >= toBusinessDay(task.startDate) && businessDay <= toBusinessDay(task.dueDate),
               );
               const isCurrentBusinessDay = businessDay.getTime() === businessToday.getTime();
+              const dayLoggedHours = dayTasks.reduce(
+                (sum, task) => sum + sumTaskWorkLogsForLatestDate(task.workLogs),
+                0,
+              );
 
               return (
                 <div
                   key={businessDay.toISOString()}
                   className={cn(
-                    "min-h-44 rounded-[18px] border border-[var(--border)] p-3",
+                    "flex min-h-44 flex-col rounded-[18px] border border-[var(--border)] p-3",
                     isSameMonth(day, currentMonth) ? "bg-white" : "bg-[var(--surface)] opacity-70",
                     isCurrentBusinessDay ? "border-[var(--accent)]" : "",
                   )}
@@ -183,6 +218,9 @@ export function ProjectCalendar({
                     {dayTasks.length > 4 ? (
                       <p className="text-xs font-medium text-[var(--muted)]">+{dayTasks.length - 4} task lainnya</p>
                     ) : null}
+                  </div>
+                  <div className="mt-3 border-t border-[var(--border)] pt-3 text-xs font-medium text-[var(--accent-strong)]">
+                    Total {formatLoggedHours(dayLoggedHours)} jam
                   </div>
                 </div>
               );
